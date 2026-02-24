@@ -22,6 +22,11 @@ on:
         default: "*.tar.gz,*.zip,build/app/outputs/flutter-apk/*.apk"
         type: string
 
+# 并发策略
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build
@@ -41,6 +46,7 @@ jobs:
           - type: macos
             os: macos-14
             path: build/macos/Build/Products/Release
+            output: "*.app"
 
           - type: windows
             os: windows-2022
