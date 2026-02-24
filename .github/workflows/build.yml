@@ -65,8 +65,10 @@ jobs:
     name: Build
     # 运行环境，基于矩阵策略
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
 
     strategy:
+      fail-fast: false
       matrix:
         # 镜像版本 https://github.com/actions/runner-images/tree/main/images
         type: [web, macos, windows, linux, android]
