@@ -71,7 +71,7 @@ jobs:
       fail-fast: false
       matrix:
         # 镜像版本 https://github.com/actions/runner-images/tree/main/images
-        type: [web, macos, windows, linux, android]
+        type: [web, macos, ios, windows, linux, android]
         include:
           - type: web
             os: ubuntu-24.04
@@ -82,10 +82,12 @@ jobs:
             os: macos-14
             path: build/macos/Build/Products/Release
             output: ''
+
           - type: ios
             os: macos-14
             path: build/ios/iphoneos
             output: ''
+
           - type: windows
             os: windows-2022
             path: build\windows\x64\runner
