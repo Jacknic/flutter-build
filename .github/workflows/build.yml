@@ -46,7 +46,7 @@ jobs:
           - type: macos
             os: macos-14
             path: build/macos/Build/Products/Release
-            output: '*.app/'
+            output: ''
 
           - type: windows
             os: windows-2022
@@ -141,6 +141,15 @@ jobs:
         run: |
           if [ "${{ matrix.type }}" = "windows" ]; then
             powershell -Command "Compress-Archive -Path '${{ matrix.path }}\\${{ matrix.output }}' -DestinationPath '${{ env.repo_name }}-${{ matrix.type }}.zip'"
+          elif [ "${{ matrix.type }}" = "macos" ]; then
+            cd ${{ matrix.path }}
+            APP_NAME=$(ls -d *.app 2>/dev/null | head -1)
+            if [ -n "$APP_NAME" ]; then
+              tar -czvf "${{ github.workspace }}/${{ env.repo_name }}-${{ matrix.type }}.tar.gz" "$APP_NAME"
+            else
+              echo "Error: No .app bundle found"
+              exit 1
+            fi
           elif [ "${{ matrix.type }}" != "android" ]; then
             tar -czvf ${{ env.repo_name }}-${{ matrix.type }}.tar.gz -C ${{ matrix.path }} ${{ matrix.output }}
           fi
