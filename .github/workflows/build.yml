@@ -141,7 +141,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ github.event.inputs.flutter_channel_name || 'stable' }}
-          flutter-version: ${{ github.event.inputs.flutter_version_name == 'auto' && '' || github.event.inputs.flutter_version_name }}
+          flutter-version: ${{ github.event.inputs.flutter_version_name != 'auto' && github.event.inputs.flutter_version_name || '' }}
           flutter-version-file: ${{ github.event.inputs.flutter_version_name == 'auto' && 'pubspec.yaml' || '' }}
           cache: true
 
