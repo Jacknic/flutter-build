@@ -46,7 +46,7 @@ jobs:
           - type: macos
             os: macos-14
             path: build/macos/Build/Products/Release
-            output: "*.app"
+            output: "."
 
           - type: windows
             os: windows-2022
