@@ -105,10 +105,19 @@ jobs:
         run: |
           git clone ${{ github.event.inputs.repository_url }} ${{ github.event.inputs.checkout_options }} .
 
+      - name: Check Platform Support
+        shell: bash
+        run: |
+          if [ ! -d "${{ matrix.type }}" ]; then
+            echo "⚠️ Platform folder '${{ matrix.type }}' not found. Skipping build for ${{ matrix.type }}."
+            echo "skip_build=true" >> $GITHUB_ENV
+          else
+            echo "skip_build=false" >> $GITHUB_ENV
+          fi      
       # 检测JDK版本（仅Android平台需要）
       - name: Detect JDK Version
         id: detect-jdk
-        if: ${{ matrix.type == 'android' }}
+        if: ${{ env.skip_build != 'true'  && matrix.type == 'android' }}
         shell: bash
         run: |
           JDK_VERSION=11
@@ -124,7 +133,7 @@ jobs:
 
       # 设置JDK（仅Android平台需要）
       - name: Set up JDK
-        if: ${{ matrix.type == 'android' }}
+        if: ${{ env.skip_build != 'true' && matrix.type == 'android' }}
         uses: actions/setup-java@v4
         with:
           java-version: ${{ steps.detect-jdk.outputs.jdk_version }}
@@ -132,12 +141,13 @@ jobs:
           cache: gradle
 
       - name: Linux环境
-        if: ${{ matrix.type == 'linux' }}
+        if: ${{ env.skip_build != 'true' && matrix.type == 'linux' }}
         run: |
           sudo apt-get update -y
           sudo apt-get install -y ninja-build libgtk-3-dev
 
       - name: FlutterAction
+        if: ${{ env.skip_build != 'true' }}
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ github.event.inputs.flutter_channel_name || 'stable' }}
@@ -146,22 +156,26 @@ jobs:
           cache: true
 
       - name: 下载依赖
+        if: ${{ env.skip_build != 'true' }}
         run: |
           flutter --version
           flutter pub get
 
       - name: 获取版本号
+        if: ${{ env.skip_build != 'true' }}
         shell: bash
         run: |
           echo "version=$(awk -F': ' '/version:/ {gsub("\\+", "-", $2); print $2}' pubspec.yaml)" >> "$GITHUB_ENV"
           echo "repo_name=$(echo '${{ github.event.inputs.repository_url }}' | sed -n 's|.*/\([^/]*\)|\1|p')" >> "$GITHUB_ENV"
 
       - name: 打印提取信息
+        if: ${{ env.skip_build != 'true' }}
         run: |
           echo "version: ${{ env.version || 'unknown' }}"
           echo "repo_name: ${{ env.repo_name }}"
 
       - name: 打包应用
+        if: ${{ env.skip_build != 'true' }}
         shell: bash
         run: |
           case "${{ matrix.type }}" in
@@ -173,6 +187,7 @@ jobs:
           esac
 
       - name: 压缩产物
+        if: ${{ env.skip_build != 'true' }}
         shell: bash
         run: |
           if [ "${{ matrix.type }}" = "windows" ]; then
@@ -232,6 +247,7 @@ jobs:
           cat build-report.md
 
       - name: ReleaseAction
+        if: ${{ env.skip_build != 'true' }}
         uses: ncipollo/release-action@v1
         with:
           tag: "v${{ github.run_number }}_${{ env.version || 'dev' }}"
