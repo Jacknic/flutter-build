@@ -125,37 +125,25 @@ jobs:
           echo "version: ${{ env.version || 'unknown' }}"
           echo "repo_name: ${{ env.repo_name }}"
 
-      - name: 打包WEB
-        if: ${{ matrix.type == 'web' }}
-        run: flutter build web --release
-
-      - name: 打包Macos
-        if: ${{ matrix.type == 'macos' }}
-        run: flutter build macos
-
-      - name: 打包Windows
-        if: ${{ matrix.type == 'windows' }}
-        shell: pwsh
-        run: flutter build windows
-
-      - name: 打包Linux
-        if: ${{ matrix.type == 'linux' }}
-        run: flutter build linux
-
-      - name: 打包安卓
-        if: ${{ matrix.type == 'android' }}
-        run: flutter build apk --split-per-abi
+      - name: 打包应用
+        shell: bash
+        run: |
+          case "${{ matrix.type }}" in
+            web)   flutter build web --release ;;
+            macos) flutter build macos ;;
+            windows) flutter build windows ;;
+            linux)  flutter build linux ;;
+            android) flutter build apk --split-per-abi ;;
+          esac
 
       - name: 压缩产物
-        if: ${{ matrix.type != 'windows' && matrix.type != 'android' }}
+        shell: bash
         run: |
-          tar -czvf ${{ env.repo_name }}-${{ matrix.type }}.tar.gz -C ${{ matrix.path }} ${{ matrix.output }}
-
-      - name: 压缩产物(windows)
-        if: ${{ matrix.type == 'windows' }}
-        shell: pwsh
-        run: |
-          Compress-Archive -Path '${{ matrix.path }}\${{ matrix.output }}' -DestinationPath '${{ env.repo_name }}-${{ matrix.type }}.zip'
+          if [ "${{ matrix.type }}" = "windows" ]; then
+            powershell -Command "Compress-Archive -Path '${{ matrix.path }}\\${{ matrix.output }}' -DestinationPath '${{ env.repo_name }}-${{ matrix.type }}.zip'"
+          elif [ "${{ matrix.type }}" != "android" ]; then
+            tar -czvf ${{ env.repo_name }}-${{ matrix.type }}.tar.gz -C ${{ matrix.path }} ${{ matrix.output }}
+          fi
 
       # 生成版本信息
       - name: Generate Version Info
