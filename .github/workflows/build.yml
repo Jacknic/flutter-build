@@ -171,8 +171,10 @@ jobs:
           VERSION_NAME="${BUILD_DATE}-${COMMIT_HASH}"
           echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
           echo "version_code=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "version_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
           echo "📦 版本名称: $VERSION_NAME"
           echo "📦 版本代码: $BUILD_NUMBER"
+          echo "📦 版本哈希: $COMMIT_HASH"
 
       # 生成构建报告
       - name: Generate Build Report
@@ -191,7 +193,7 @@ jobs:
           ## 📦 仓库信息
           - **仓库URL**: ${{ github.event.inputs.repository_url }}
           - **检出参数**: ${{ github.event.inputs.checkout_options }}
-          - **提交**: ${{ github.sha }}
+          - **提交**: ${{ steps.version.outputs.version_hash }}
           - **运行ID**: [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
           EOF
           cat build-report.md
