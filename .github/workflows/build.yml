@@ -1,0 +1,208 @@
+name: Flutter Build
+
+permissions:
+  contents: write
+
+on:
+  # 允许手动触发工作流，支持指定仓库URL
+  workflow_dispatch:
+    inputs:
+      repository_url:
+        description: "Git repository URL"
+        required: true
+        type: string
+      checkout_options:
+        description: "checkout options (e.g., -b branch_name --depth=1)"
+        required: false
+        default: "--depth=1"
+        type: string
+      artifacts_pattern:
+        description: "Artifacts pattern to upload"
+        required: true
+        default: "*.tar.gz,*.zip,build/app/outputs/flutter-apk/*.apk"
+        type: string
+
+jobs:
+  build:
+    name: Build
+    # 运行环境，基于矩阵策略
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        # 镜像版本 https://github.com/actions/runner-images/tree/main/images
+        type: [web, macos, windows, linux, android]
+        include:
+          - type: web
+            os: ubuntu-24.04
+            path: build
+            output: web
+
+          - type: macos
+            os: macos-14
+            path: build/macos/Build/Products/Release
+
+          - type: windows
+            os: windows-2022
+            path: build\windows\x64\runner
+            output: Release
+
+          - type: linux
+            os: ubuntu-24.04
+            path: build/linux/x64/release
+            output: bundle
+
+          - type: android
+            os: ubuntu-24.04
+            path: build/app/outputs
+            output: flutter-apk
+
+    steps:
+      # 检出指定仓库（支持自定义URL）
+      - name: Checkout Repository
+        shell: bash
+        run: |
+          git clone ${{ github.event.inputs.repository_url }} ${{ github.event.inputs.checkout_options }} .
+
+      # 检测JDK版本（仅Android平台需要）
+      - name: Detect JDK Version
+        id: detect-jdk
+        if: ${{ matrix.type == 'android' }}
+        shell: bash
+        run: |
+          JDK_VERSION=11
+          if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
+            GRADLE_VERSION=$(grep "distributionUrl" android/gradle/wrapper/gradle-wrapper.properties | grep -oE 'gradle-[0-9]+' | cut -d'-' -f2)
+            case $GRADLE_VERSION in
+              9|1[0-9]) JDK_VERSION=21 ;;
+              8) JDK_VERSION=17 ;;
+              7) JDK_VERSION=11 ;;
+            esac
+          fi
+          echo "jdk_version=$JDK_VERSION" >> $GITHUB_OUTPUT
+
+      # 设置JDK（仅Android平台需要）
+      - name: Set up JDK
+        if: ${{ matrix.type == 'android' }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ steps.detect-jdk.outputs.jdk_version }}
+          distribution: "temurin"
+          cache: gradle
+
+      - name: Linux环境
+        if: ${{ matrix.type == 'linux' }}
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ninja-build libgtk-3-dev
+
+      - name: FlutterAction
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.29.0
+          cache: true
+
+      - name: 下载依赖
+        run: flutter pub get
+
+      - name: 获取版本号
+        if: ${{ matrix.type != 'windows' }}
+        run: |
+          echo "version=$(awk -F': ' '/version:/ {gsub("\\+", "-", $2); print $2}' pubspec.yaml)" >> "$GITHUB_ENV"
+
+      - name: 获取版本号(windows)
+        if: ${{ matrix.type == 'windows' }}
+        shell: pwsh
+        run: |
+          $content = Get-Content pubspec.yaml -Raw
+          if ($content -match 'version:\s*([^\s]+)') {
+            $version = $Matches[1] -replace '\+', '-'
+            echo "version=$version" | Out-File -Append -Encoding utf8 -FilePath $Env:GITHUB_ENV
+          }
+
+      - name: 打印版本号
+        run: |
+          echo "version: ${{ env.version || 'unknown' }}"
+
+      - name: 打包WEB
+        if: ${{ matrix.type == 'web' }}
+        run: flutter build web --release
+
+      - name: 打包Macos
+        if: ${{ matrix.type == 'macos' }}
+        run: flutter build macos
+
+      - name: 打包Windows
+        if: ${{ matrix.type == 'windows' }}
+        shell: pwsh
+        run: flutter build windows
+
+      - name: 打包Linux
+        if: ${{ matrix.type == 'linux' }}
+        run: flutter build linux
+
+      - name: 打包安卓
+        if: ${{ matrix.type == 'android' }}
+        run: flutter build apk --split-per-abi
+
+      - name: 压缩产物
+        if: ${{ matrix.type != 'windows' && matrix.type != 'android' }}
+        run: |
+          tar -czvf ${{ github.event.repository.name }}-${{ matrix.type }}.tar.gz -C ${{ matrix.path }} ${{ matrix.output }}
+
+      - name: 压缩产物(windows)
+        if: ${{ matrix.type == 'windows' }}
+        shell: pwsh
+        run: |
+          Compress-Archive -Path '${{ matrix.path }}\${{ matrix.output }}' -DestinationPath '${{ github.event.repository.name }}-${{ matrix.type }}.zip'
+
+      # 生成版本信息
+      - name: Generate Version Info
+        id: version
+        shell: bash
+        run: |
+          # 生成版本号
+          COMMIT_HASH=$(git rev-parse --short HEAD)
+          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD | sed 's/\//-/g')
+          BUILD_DATE=$(date '+%Y%m%d-%H%M%S')
+          BUILD_NUMBER=${GITHUB_RUN_NUMBER}
+
+          VERSION_NAME="${BUILD_DATE}-${COMMIT_HASH}"
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "version_code=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "📦 版本名称: $VERSION_NAME"
+          echo "📦 版本代码: $BUILD_NUMBER"
+
+      # 生成构建报告
+      - name: Generate Build Report
+        if: always()
+        shell: bash
+        run: |
+          cat > build-report.md <<EOF
+          # Flutter 构建报告 - ${{ matrix.type }}
+
+          ## 📋 构建信息
+          - **平台**: ${{ matrix.type }}
+          - **JDK版本**: ${{ steps.detect-jdk.outputs.jdk_version || 'N/A' }}
+          - **版本名称**: ${{ steps.version.outputs.version_name }}
+          - **版本代码**: ${{ steps.version.outputs.version_code }}
+
+          ## 📦 仓库信息
+          - **仓库URL**: ${{ github.event.inputs.repository_url }}
+          - **检出参数**: ${{ github.event.inputs.checkout_options }}
+          - **提交**: ${{ github.sha }}
+          - **运行ID**: [${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          EOF
+          cat build-report.md
+
+      - name: ReleaseAction
+        uses: ncipollo/release-action@v1
+        with:
+          tag: "${{ steps.version.outputs.version_name }}_${{ env.version || 'dev' }}"
+          draft: false
+          artifacts: "${{ github.event.inputs.artifacts_pattern }}"
+          makeLatest: "latest"
+          allowUpdates: true
+          bodyFile: build-report.md
+
