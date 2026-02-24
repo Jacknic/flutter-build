@@ -21,7 +21,7 @@ on:
         required: true
         default: "*.tar.gz,*.zip,build/app/outputs/flutter-apk/*.apk"
         type: string
-      flutter_version:
+      flutter_version_name:
         description: "Flutter version (auto-detect from pubspec.yaml)"
         required: false
         default: "auto"
@@ -43,7 +43,7 @@ on:
           - 2.8.x
           - 2.5.x
           - 2.2.x
-      flutter_channel:
+      flutter_channel_name:
         description: "Flutter channel"
         required: false
         default: "stable"
@@ -140,9 +140,9 @@ jobs:
       - name: FlutterAction
         uses: subosito/flutter-action@v2
         with:
-          channel: ${{ github.event.inputs.flutter_channel || 'stable' }}
-          flutter-version: ${{ github.event.inputs.flutter_version == 'auto' && '' || github.event.inputs.flutter_version }}
-          flutter-version-file: ${{ github.event.inputs.flutter_version == 'auto' && 'pubspec.yaml' || '' }}
+          channel: ${{ github.event.inputs.flutter_channel_name || 'stable' }}
+          flutter-version: ${{ github.event.inputs.flutter_version_name == 'auto' && '' || github.event.inputs.flutter_version_name }}
+          flutter-version-file: ${{ github.event.inputs.flutter_version_name == 'auto' && 'pubspec.yaml' || '' }}
           cache: true
 
       - name: 下载依赖
