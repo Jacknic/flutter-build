@@ -207,7 +207,7 @@ jobs:
       - name: ReleaseAction
         uses: ncipollo/release-action@v1
         with:
-          tag: "${{ steps.version.outputs.version_name }}_${{ env.version || 'dev' }}"
+          tag: "v${{ env.GITHUB_RUN_NUMBER }}_${{ env.version || 'dev' }}"
           draft: false
           artifacts: "${{ github.event.inputs.artifacts_pattern }}"
           makeLatest: "latest"
