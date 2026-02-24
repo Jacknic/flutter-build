@@ -46,7 +46,7 @@ jobs:
           - type: macos
             os: macos-14
             path: build/macos/Build/Products/Release
-            output: "*.app"
+            output: '*.app'
 
           - type: windows
             os: windows-2022
@@ -115,23 +115,15 @@ jobs:
           flutter pub get
 
       - name: 获取版本号
-        if: ${{ matrix.type != 'windows' }}
+        shell: bash
         run: |
           echo "version=$(awk -F': ' '/version:/ {gsub("\\+", "-", $2); print $2}' pubspec.yaml)" >> "$GITHUB_ENV"
+          echo "repo_name=$(echo '${{ github.event.inputs.repository_url }}' | sed -n 's|.*/\([^/]*\)|\1|p')" >> "$GITHUB_ENV"
 
-      - name: 获取版本号(windows)
-        if: ${{ matrix.type == 'windows' }}
-        shell: pwsh
-        run: |
-          $content = Get-Content pubspec.yaml -Raw
-          if ($content -match 'version:\s*([^\s]+)') {
-            $version = $Matches[1] -replace '\+', '-'
-            echo "version=$version" | Out-File -Append -Encoding utf8 -FilePath $Env:GITHUB_ENV
-          }
-
-      - name: 打印版本号
+      - name: 打印提取信息
         run: |
           echo "version: ${{ env.version || 'unknown' }}"
+          echo "repo_name: ${{ env.repo_name }}"
 
       - name: 打包WEB
         if: ${{ matrix.type == 'web' }}
@@ -157,13 +149,13 @@ jobs:
       - name: 压缩产物
         if: ${{ matrix.type != 'windows' && matrix.type != 'android' }}
         run: |
-          tar -czvf ${{ github.event.repository.name }}-${{ matrix.type }}.tar.gz -C ${{ matrix.path }} ${{ matrix.output }}
+          tar -czvf ${{ env.repo_name }}-${{ matrix.type }}.tar.gz -C ${{ matrix.path }} ${{ matrix.output }}
 
       - name: 压缩产物(windows)
         if: ${{ matrix.type == 'windows' }}
         shell: pwsh
         run: |
-          Compress-Archive -Path '${{ matrix.path }}\${{ matrix.output }}' -DestinationPath '${{ github.event.repository.name }}-${{ matrix.type }}.zip'
+          Compress-Archive -Path '${{ matrix.path }}\${{ matrix.output }}' -DestinationPath '${{ env.repo_name }}-${{ matrix.type }}.zip'
 
       # 生成版本信息
       - name: Generate Version Info
