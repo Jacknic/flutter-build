@@ -143,7 +143,6 @@ jobs:
         with:
           java-version: ${{ steps.detect-jdk.outputs.jdk_version }}
           distribution: "temurin"
-          cache: gradle
 
       - name: Linux环境
         if: ${{ env.skip_build != 'true' && matrix.type == 'linux' }}
@@ -158,7 +157,6 @@ jobs:
           channel: ${{ github.event.inputs.flutter_channel_name || 'stable' }}
           flutter-version: ${{ github.event.inputs.flutter_version_name != 'auto' && github.event.inputs.flutter_version_name || '' }}
           flutter-version-file: ${{ github.event.inputs.flutter_version_name == 'auto' && 'pubspec.yaml' || '' }}
-          cache: true
 
       - name: 下载依赖
         if: ${{ env.skip_build != 'true' }}
