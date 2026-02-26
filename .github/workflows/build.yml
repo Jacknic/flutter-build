@@ -30,6 +30,7 @@ on:
           - auto
           - 3.x
           - 2.x
+          - 1.x
           - 3.41.x
           - 3.38.x
           - 3.22.x
@@ -43,6 +44,12 @@ on:
           - 2.8.x
           - 2.5.x
           - 2.2.x
+          - 1.22.x
+          - 1.17.x
+          - 1.12.x
+          - 1.5.x
+          - 1.2.x
+          - 1.0.x
       flutter_channel_name:
         description: "Flutter channel"
         required: false
