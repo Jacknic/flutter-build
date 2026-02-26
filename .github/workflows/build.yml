@@ -168,7 +168,7 @@ jobs:
         if: ${{ env.skip_build != 'true' }}
         shell: bash
         run: |
-          echo "repo_name=$(echo '${{ github.event.inputs.repository_url }}' | sed -n 's|.*/\([^/]*\)|\1|p')" >> "$GITHUB_ENV"
+          echo "repo_name=$(basename '${{ github.event.inputs.repository_url }}' | sed 's/\.git$//I')" >> "$GITHUB_ENV"
 
       - name: 打印提取信息
         if: ${{ env.skip_build != 'true' }}
