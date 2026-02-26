@@ -170,13 +170,11 @@ jobs:
         if: ${{ env.skip_build != 'true' }}
         shell: bash
         run: |
-          echo "version=$(awk -F': ' '/version:/ {gsub("\\+", "-", $2); print $2}' pubspec.yaml)" >> "$GITHUB_ENV"
           echo "repo_name=$(echo '${{ github.event.inputs.repository_url }}' | sed -n 's|.*/\([^/]*\)|\1|p')" >> "$GITHUB_ENV"
 
       - name: 打印提取信息
         if: ${{ env.skip_build != 'true' }}
         run: |
-          echo "version: ${{ env.version || 'unknown' }}"
           echo "repo_name: ${{ env.repo_name }}"
 
       - name: 打包应用
@@ -256,7 +254,7 @@ jobs:
         if: ${{ env.skip_build != 'true' }}
         uses: ncipollo/release-action@v1
         with:
-          tag: "v${{ github.run_number }}_${{ env.version || 'dev' }}"
+          tag: "v${{ github.run_number }}_${{ env.repo_name}}"
           draft: false
           artifacts: "${{ github.event.inputs.artifacts_pattern }}"
           makeLatest: "latest"
